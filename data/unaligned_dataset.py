@@ -3,7 +3,32 @@ from data.base_dataset import BaseDataset, get_transform
 from data.image_folder import make_dataset
 from PIL import Image
 import random
-
+import imageio
+import numpy as np
+import torch
+#
+# class LoadData():
+#     def __init__(self):
+#         self.dataPath ='../datasets/7_scenes/fire/seq-01/frame-000'
+#         self.images = []
+#         self.depthimages = []
+#         for i in range(0, 1000):
+#             imagePath = self.dataPath + "{:03}".format(i) + '.color.png'
+#             img = imageio.imread(imagePath)
+#
+#             gray = self.rgb2gray(img) / 255
+#             self.images.append(gray)
+#
+#         for i in range(0, 1000):
+#             imagePath = self.dataPath + "{:03}".format(i) + '.depth.png'
+#
+#             img = imageio.imread(imagePath) / 6553
+#             img[img > 1] = 1
+#             # print(i,np.max(img))
+#             self.depthimages.append(img)
+#
+#     def rgb2gray(self, rgb):
+#         return np.dot(rgb[..., :3], [0.2989, 0.5870, 0.1140])
 
 class UnalignedDataset(BaseDataset):
     """
@@ -54,11 +79,24 @@ class UnalignedDataset(BaseDataset):
         else:   # randomize the index for domain B to avoid fixed pairs.
             index_B = random.randint(0, self.B_size - 1)
         B_path = self.B_paths[index_B]
-        A_img = Image.open(A_path).convert('RGB')
-        B_img = Image.open(B_path).convert('RGB')
-        # apply image transformation
-        A = self.transform_A(A_img)
-        B = self.transform_B(B_img)
+
+        grayImg = imageio.imread(A_path)
+        A = [self.rgb2gray(grayImg) / 255.0]
+        A = torch.tensor(A).float()
+        print("SizeA = ", A.size())
+
+        depthImg = imageio.imread(B_path) / 6553.0
+        depthImg[depthImg > 1] = 1
+        B = [depthImg]
+        B = torch.tensor(B).float()
+
+        # A_img = Image.open(A_path).convert('RGB')
+        # B_img = Image.open(B_path).convert('RGB')
+        # # apply image transformation
+        # A = self.transform_A(A_img)
+        # B = self.transform_B(B_img)
+        # print("SizeA = ", A.size())
+
 
         return {'A': A, 'B': B, 'A_paths': A_path, 'B_paths': B_path}
 
@@ -69,3 +107,6 @@ class UnalignedDataset(BaseDataset):
         we take a maximum of
         """
         return max(self.A_size, self.B_size)
+
+    def rgb2gray(self, rgb):
+        return np.dot(rgb[..., :3], [0.2989, 0.5870, 0.1140])

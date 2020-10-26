@@ -13,6 +13,10 @@ See our template dataset class 'template_dataset.py' for more details.
 import importlib
 import torch.utils.data
 from data.base_dataset import BaseDataset
+import imageio
+import numpy as np
+import itertools
+import time
 
 
 def find_dataset_using_name(dataset_name):
@@ -22,11 +26,14 @@ def find_dataset_using_name(dataset_name):
     be instantiated. It has to be a subclass of BaseDataset,
     and it is case-insensitive.
     """
+    print("origin=", dataset_name)
     dataset_filename = "data." + dataset_name + "_dataset"
     datasetlib = importlib.import_module(dataset_filename)
 
     dataset = None
     target_dataset_name = dataset_name.replace('_', '') + 'dataset'
+    print(dataset_name, "***",target_dataset_name)
+
     for name, cls in datasetlib.__dict__.items():
         if name.lower() == target_dataset_name.lower() \
            and issubclass(cls, BaseDataset):
@@ -58,6 +65,32 @@ def create_dataset(opt):
     dataset = data_loader.load_data()
     return dataset
 
+#
+# class LoadData():
+#     def __init__(self):
+#         self.dataPath ='../datasets/7_scenes/fire/seq-01/frame-000'
+#         self.images = []
+#         self.depthimages = []
+#         for i in range(0, 1000):
+#             imagePath = self.dataPath + "{:03}".format(i) + '.color.png'
+#             # print(imagePath)
+#             img = imageio.imread(imagePath)
+#
+#             gray = self.rgb2gray(img) / 255
+#             self.images.append(gray)
+#
+#         for i in range(0, 1000):
+#             imagePath = self.dataPath + "{:03}".format(i) + '.depth.png'
+#
+#             img = imageio.imread(imagePath) / 6553
+#             img[img > 1] = 1
+#             # print(i,np.max(img))
+#             self.depthimages.append(img)
+#
+#     def rgb2gray(self, rgb):
+#         return np.dot(rgb[..., :3], [0.2989, 0.5870, 0.1140])
+
+
 
 class CustomDatasetDataLoader():
     """Wrapper class of Dataset class that performs multi-threaded data loading"""
@@ -69,14 +102,22 @@ class CustomDatasetDataLoader():
         Step 2: create a multi-threaded data loader.
         """
         self.opt = opt
+        print("opt====",self.opt)
         dataset_class = find_dataset_using_name(opt.dataset_mode)
+        print("dataset_class=", dataset_class)
         self.dataset = dataset_class(opt)
+        print("dataset = ", self.dataset)
         print("dataset [%s] was created" % type(self.dataset).__name__)
         self.dataloader = torch.utils.data.DataLoader(
             self.dataset,
             batch_size=opt.batch_size,
             shuffle=not opt.serial_batches,
             num_workers=int(opt.num_threads))
+        # self.dataloader = torch.utils.data.DataLoader(
+        #     new_dataset,
+        #     batch_size=opt.batch_size,
+        #     shuffle=not opt.serial_batches,
+        #     num_workers=int(opt.num_threads))
 
     def load_data(self):
         return self
